@@ -1,56 +1,66 @@
 #!/usr/bin/env python
-import os, urllib2, re, sys, commands, random, time
+# Author: elliott.friedman@gmail.com (Elliott Friedman)
+#
+# This script downloads interfacelift.com wallpapers.  It is intended to be run
+# as a cron job to keep your local directory up to date.
 
-# -- Changable Variables
-url             = 'http://interfacelift.com/wallpaper/downloads/date/2_screens/2880x900/' #Browse to the page that has all the wallpaper you want and paste here
-directory       = '/home/user/wallpaper/2880x900' #Path to download to
-stoponfind      = '1' # Set to 0 to download all files even if the file exists and 1 to stop when it finds where it left off
-wgetpath        = '/usr/bin/wget' #Default on linux systems /usr/local/bin/wget on freebsd
+# You will need to modify the next 2 variables:
 
-# -- Should not need to edit below here unless something stops working --
-useragent       = 'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3 (.NET CLR 3.5.30729)' #Fake useragent since wget is blocked
-pattern         = '(?<=<a href=")/wallpaper/.*jpg(?=">)' # The regex pattern used to look up picture url paths
-picturepattern  = '[^/]*$' # The regex pattern to pull picture filename to see if file exists
-wallpapercount  = 0
-count           = 1
+# Browse to the page that has the wallpaper resolution you want and modify the
+# line below to match that (eg: modify date, widescreen, 2880x1800, etc):
+INDEX = '/wallpaper/downloads/date/widescreen/2880x1800'
 
-while count < 9999999:
-        headers    = { 'User-Agent' : useragent }
-        request    = urllib2.Request(url + "index" + str(count) + ".html", None, headers)
-        data       = urllib2.urlopen(request).read()
-        pictures   = re.findall(pattern, data)
-        urlcount   = len(pictures)
-        for picture in pictures:
-                m = re.search(picturepattern, picture)
-                picturefile=m.group()
-                if os.path.exists(directory + "/" + picturefile):
-                        if stoponfind == "1":
-                                print 'Directory up to date. Downloaded ' + str(wallpapercount) + ' new wallpaper.'
-                                quit()
-                status, output = commands.getstatusoutput(wgetpath + ' -P ' + directory + ' --random-wait -nc -U "' + useragent + '" ' + 'http://interfacelift.com' + picture)
-                if status == 0:
-                        print str(wallpapercount) + '. Downloaded http://interfacelift.com' + picture + ' ...'
-                else:
-                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WGET OUTPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                        print '----------------------------------------------------------------------------------'
-                        print output
-                        print '----------------------------------------------------------------------------------'
-                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                        print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                        print str(wallpapercount) + '. DOWNLOAD FAILED check wget output above for reason.'
-                        print 'Exiting script ... wget returned non 0 exit status code: ' + str(status)
-                        quit()
-                wallpapercount += 1
-        if urlcount == 0:
-                print "Downloaded " + str(wallpapercount) + " wallpaper from InterfaceLift."
-                randomnum  = random.randint(5,10)
-                print 'Sleeping for :' + str(randomnum)
-                quit()
-        count += 1
-        randomnum  = random.randint(10,30)
-        print 'Sleeping for :' + str(randomnum)
-        time.sleep(randomnum)
+# Path to download to (no escaping needed).
+DIR = '/Users/friedman/Pictures/Retina Wallpapers'
 
+
+# You do not need to modify anything below this line.
+import logging
+import os
+import re
+import time
+import urllib2
+
+URL = 'http://interfacelift.com'
+INDEX = '%s%s' % (URL, INDEX)
+UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 '
+      '(KHTML, like Gecko) Chrome/24.0.1312.52 Safari/537.17')
+RE = r'<a href="(/wallpaper/.*_%s\.jpg)"><img src="' % INDEX.split('/')[-1]
+count = 1
+downloads = 0
+logging.basicConfig(
+    format=('%(asctime)s.%(msecs)-3d %(filename)s:%(lineno)s]'
+            '  %(message)s'), level=logging.DEBUG, datefmt='%m-%d %H:%M:%S')
+
+
+def Finished():
+  logging.info('Downloaded %d wallpapers.  Directory is now up to date.',
+      downloads)
+  exit()
+
+
+while True:
+  headers = {'User-Agent': UA}
+  request = urllib2.Request('%s/index%d.html' % (INDEX, count), None, headers)
+  data = urllib2.urlopen(request).read()
+  logging.debug('Grabbed %s/index%d.html', INDEX, count)
+  pictures = re.findall(RE, data)
+  logging.debug('Found %d wallpaper files.', len(pictures))
+  for pic in pictures:
+    logging.debug('Working on %s', pic.split('/')[-1])
+    filename = pic.split('/')[-1]
+    if os.path.exists('%s/%s' % (DIR, filename)):
+      logging.error('%s/%s exists, exiting.', DIR, filename)
+      Finished()
+    request = urllib2.Request('%s%s' % (URL, pic), None, headers)
+    data = urllib2.urlopen(request).read()
+    logging.debug('Downloading %s%s...', URL, pic)
+    pic_file = open('%s/%s' % (DIR, filename), 'w')
+    pic_file.write(data)
+    pic_file.close()
+    downloads += 1
+    time.sleep(1)
+  if not pictures:
+    Finished()
+  time.sleep(5)
+  count += 1

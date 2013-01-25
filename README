@@ -1,16 +1,4 @@
-To install just run the following:
+Edit the first 2 variables in the script to tell it which type of wallpapers to
+download, and where to store them.  Then just cron it up and let it run:
 
-wget --no-check-certificate https://github.com/dmacpherson/py-interfacelift-downloader/raw/master/interfacelift.py
-
-Edit the variables to where you'd like to download from and download to and run "python interfacelift.py"
-
-
-
-The regex pattern matches any string which:
-
-- Is preceeded by <a href="
-- begins with /wallpaper/
-- ends in jpg
-- preceeds ">
-
-I think this is enough to filter out only the wanted links. Note that the matched string will include the random part of the URL so that the user never has to specify it manually. Each filename also contains the resolution. This could be added to the pattern in case it stops working.
+python interfacelift.py
