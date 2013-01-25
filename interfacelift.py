@@ -26,18 +26,17 @@ INDEX = '%s%s' % (URL, INDEX)
 UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 '
       '(KHTML, like Gecko) Chrome/24.0.1312.52 Safari/537.17')
 RE = r'<a href="(/wallpaper/.*_%s\.jpg)"><img src="' % INDEX.split('/')[-1]
+EXISTING = set(os.listdir(DIR))
 count = 1
 downloads = 0
 logging.basicConfig(
     format=('%(asctime)s.%(msecs)-3d %(filename)s:%(lineno)s]'
             '  %(message)s'), level=logging.DEBUG, datefmt='%m-%d %H:%M:%S')
 
-
 def Finished():
   logging.info('Downloaded %d wallpapers.  Directory is now up to date.',
       downloads)
   exit()
-
 
 while True:
   headers = {'User-Agent': UA}
@@ -45,11 +44,11 @@ while True:
   data = urllib2.urlopen(request).read()
   logging.debug('Grabbed %s/index%d.html', INDEX, count)
   pictures = re.findall(RE, data)
-  logging.debug('Found %d wallpaper files.', len(pictures))
+  logging.debug('Found %d wallpapers.', len(pictures))
   for pic in pictures:
-    logging.debug('Working on %s', pic.split('/')[-1])
     filename = pic.split('/')[-1]
-    if os.path.exists('%s/%s' % (DIR, filename)):
+    logging.debug('Checking if %s already exists.', filename)
+    if filename in EXISTING:
       logging.error('%s/%s exists, exiting.', DIR, filename)
       Finished()
     request = urllib2.Request('%s%s' % (URL, pic), None, headers)
