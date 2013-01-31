@@ -25,8 +25,10 @@ URL = 'http://interfacelift.com'
 INDEX = '%s%s' % (URL, INDEX)
 UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 '
       '(KHTML, like Gecko) Chrome/24.0.1312.52 Safari/537.17')
-RE = r'<a href="(/wallpaper/.*_%s\.jpg)"><img src="' % INDEX.split('/')[-1]
+RE_CODE = r'<a href="/wallpaper/(\w+)/\d+_\w+_%s\.jpg"><img src="' % INDEX.split('/')[-1]
+RE_PICS = r'<a href="/wallpaper/\w+/(\d+_\w+_%s\.jpg)"><img src="' % INDEX.split('/')[-1]
 EXISTING = set(os.listdir(DIR))
+code = ''
 count = 1
 downloads = 0
 logging.basicConfig(
@@ -43,20 +45,21 @@ while True:
   request = urllib2.Request('%s/index%d.html' % (INDEX, count), None, headers)
   data = urllib2.urlopen(request).read()
   logging.debug('Grabbed %s/index%d.html', INDEX, count)
-  pictures = re.findall(RE, data)
-  logging.debug('Found %d wallpapers.', len(pictures))
-  for pic in pictures:
-    filename = pic.split('/')[-1]
-    logging.debug('Checking if %s already exists.', filename)
+  if not code:
+    code = re.findall(RE_CODE, data)[0]
+  pictures = re.findall(RE_PICS, data)
+  logging.debug('Found %d wallpapers: %s', len(pictures), ', '.join(pictures))
+  for filename in pictures:
     if filename in EXISTING:
       logging.error('%s/%s exists, exiting.', DIR, filename)
       Finished()
-    request = urllib2.Request('%s%s' % (URL, pic), None, headers)
+    logging.debug('Downloading: %s/wallpaper/%s/%s', URL, code, filename)
+    request = urllib2.Request('%s/wallpaper/%s/%s' % (URL, code, filename), None, headers)
     data = urllib2.urlopen(request).read()
-    logging.debug('Downloading %s%s...', URL, pic)
     pic_file = open('%s/%s' % (DIR, filename), 'w')
     pic_file.write(data)
     pic_file.close()
+    logging.debug('Wrote: %s/%s', DIR, filename)
     downloads += 1
     time.sleep(1)
   if not pictures:
