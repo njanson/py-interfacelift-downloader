@@ -61,7 +61,6 @@ def DownloadWallpaper(filename, code):
 def CreateBaseDirAndOpen(filename, mode):
   """Create the base directory, if non-extant, and open a filename."""
   dirname = os.path.dirname(filename)
-  print 'dirname: %s' % dirname
   if not os.path.exists(dirname):
     logging.debug('Making dirname %s.', dirname)
     os.makedirs(dirname)
